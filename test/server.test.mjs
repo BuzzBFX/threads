@@ -20,7 +20,7 @@ test('server: empty home', async () => {
     const B = (await s.get('/api/brain')).json;
     assert.equal(B.empty, true);
     assert.deepEqual(B.nodes, []);
-    assert.deepEqual(B.counts, { run: 0, await: 0, wait: 0, idle: 0, done: 0 });
+    assert.deepEqual(B.counts, { run: 0, await: 0, wait: 0, idle: 0, done: 0, check: 0, look: 0 });
     const T = (await s.get('/api/tools')).json;
     for (const k of ['skills', 'helpers', 'mcp', 'hooks', 'commands', 'plugins', 'own']) assert.deepEqual(T[k], [], k);
     assert.deepEqual((await s.get('/api/team')).json.helpers, []);
@@ -90,5 +90,55 @@ test('server: guards', async () => {
   const ro = await startServer({ ...h, args: ['--read-only'] });
   try {
     assert.equal((await ro.post('/api/seen', { id: nodeId(h.ids.A2) })).status, 403);
+    assert.equal((await ro.post('/api/name', { label: 'beta', name: 'Bob' })).status, 403);
+    assert.ok(!fs.existsSync(ro.configFile), 'read-only writes no config');
+  } finally { await ro.stop(); }
+});
+
+test('server: a job\'s outputs open through a stubbed opener; unknown ids, a gone file, a bad token and read-only are refused; Done, I\'ve handled it clears needs you', async () => {
+  const root = tmpDir();
+  const h = makeHome(root, Date.now(), { marks: true });
+  const opened = path.join(tmpDir(), 'opened.txt');
+  const s = await startServer({ ...h, env: { THREADS_TEST_OPENER: opened } });
+  const log = () => { try { return fs.readFileSync(opened, 'utf8').split('\n').filter(Boolean); } catch { return []; } };
+  try {
+    const B = (await s.get('/api/brain')).json;
+    const g = B.jobs.find((j) => j.job === 'Gallery'), builder = B.jobs.find((j) => j.job === 'builder');
+    assert.equal(g.outputs.length, 3);
+    const r = await s.post(`/api/jobs/${g.id}/open`, { output: 0 });
+    assert.equal(r.status, 200); assert.equal(r.json.kind, 'html');
+    assert.ok(!r.text.includes(root), 'the answer never holds the path');
+    assert.equal((await s.post(`/api/jobs/${g.id}/open`, { output: 2 })).status, 200);
+    assert.deepEqual(log(), [h.outputs.page, h.outputs.url]);
+    // refused: an id not on the tree, a malformed id, a body that names a file, a bad or missing token, no Origin
+    assert.equal((await s.post('/api/jobs/j-0000000000000000/open', {})).status, 404);
+    assert.equal((await s.post('/api/jobs/../open', {})).status, 404);
+    assert.equal((await s.post(`/api/jobs/${g.id}/open`, { output: 0, path: h.outputs.page })).status, 400);
+    assert.equal((await s.post(`/api/jobs/${g.id}/open`, {}, { 'X-Threads-Token': 'x'.repeat(32) })).status, 401);
+    assert.equal((await s.raw('POST', `/api/jobs/${g.id}/open`, { headers: { Origin: s.origin, 'Content-Type': 'application/json' }, body: '{}' })).status, 401);
+    assert.equal((await s.post(`/api/jobs/${g.id}/open`, {}, { Origin: '' })).status, 403);
+    assert.equal((await s.get(`/api/jobs/${g.id}/open`)).status, 405);
+    // the file is gone: refused, and the page no longer lists it
+    fs.rmSync(h.outputs.page);
+    const gone = await s.post(`/api/jobs/${g.id}/open`, { output: 2 });
+    assert.equal(gone.status, 404);
+    assert.equal((await s.get('/api/brain')).json.jobs.find((j) => j.id === g.id).outputs.length, 2);
+    assert.equal(log().length, 2, 'nothing more was opened');
+    // Done, I've handled it
+    assert.equal(builder.st, 'await');
+    assert.equal((await s.post(`/api/jobs/${g.id}/handled`, {})).status, 404, 'a job that does not need you');
+    assert.equal((await s.post(`/api/jobs/${builder.id}/handled`, { x: 1 })).status, 400);
+    assert.equal((await s.post(`/api/jobs/${builder.id}/handled`, {})).status, 200);
+    const after = (await s.get('/api/brain')).json.jobs.find((j) => j.id === builder.id);
+    assert.equal(after.st, 'done'); assert.equal(after.needs, undefined);
+  } finally { await s.stop(); }
+  const h2 = makeHome(tmpDir(), Date.now(), { marks: true });
+  const ro = await startServer({ ...h2, args: ['--read-only'], env: { THREADS_TEST_OPENER: opened } });
+  try {
+    const B = (await ro.get('/api/brain')).json;
+    const g = B.jobs.find((j) => j.job === 'Gallery'), builder = B.jobs.find((j) => j.job === 'builder');
+    assert.equal((await ro.post(`/api/jobs/${g.id}/open`, {})).status, 403);
+    assert.equal((await ro.post(`/api/jobs/${builder.id}/handled`, {})).status, 403);
+    assert.equal(log().length, 2, 'read-only opens nothing');
   } finally { await ro.stop(); }
 });

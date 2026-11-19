@@ -84,7 +84,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .br-row1 { display: flex; align-items: flex-start; gap: 40px; margin-top: 44px; }
 .br-pcol { display: flex; flex-direction: column; align-items: flex-start; min-width: 240px; }
 .br-col { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 0 24px; }
-.br-kids { display: flex; flex-direction: column; gap: 8px; margin: -4px 0 0 24px; }
+/* a session's jobs: side by side as its branches, four to a row */
+.br-jobs { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px 16px; margin: 12px 0 6px 24px; max-width: calc(4 * 236px + 3 * 16px); }
+.br-jobs > .br-more { align-self: center; }
 .br-more { font-size: 11px; color: var(--mute); padding-left: 2px; }
 .br-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .br-w { fill: none; stroke-width: 2; stroke: color-mix(in srgb, var(--line2) 90%, var(--bg)); }
@@ -92,8 +94,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .br-w.idle { stroke: color-mix(in srgb, var(--idle) 60%, var(--bg)); }
 .br-w.wait { stroke: color-mix(in srgb, var(--wait) 70%, var(--bg)); stroke-dasharray: 4 3; }
 .br-w.await { stroke: color-mix(in srgb, var(--await) 70%, var(--bg)); }
+.br-w.done { stroke: color-mix(in srgb, var(--done) 55%, var(--bg)); }
 .br-port { fill: var(--line2); }
-.br-port.live { fill: var(--run); } .br-port.idle { fill: var(--idle); } .br-port.wait { fill: var(--wait); } .br-port.await { fill: var(--await); }
+.br-port.live { fill: var(--run); } .br-port.idle { fill: var(--idle); } .br-port.wait { fill: var(--wait); } .br-port.await { fill: var(--await); } .br-port.done { fill: var(--done); }
 .br-dot { fill: var(--run); filter: drop-shadow(0 0 4px rgba(97, 214, 214, .95)); }
 .br-wires.hov .br-w, .br-wires.hov .br-port { opacity: .18; }
 .br-wires.hov .hi { opacity: 1; }
@@ -101,7 +104,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* nodes */
 .br-n { position: relative; z-index: 1; background: var(--bg); border: 1px solid var(--line2); padding: 5px 8px 6px; display: flex; flex-direction: column; gap: 4px; text-align: left; min-width: 240px; max-width: 420px; }
-.br-n.s-run, .br-n.s-await, .br-n.s-idle { border-color: var(--c); }
+.br-n.s-run, .br-n.s-await, .br-n.s-idle, .br-n.s-done { border-color: var(--c); }
 .br-n.s-wait { border: 1px dashed var(--wait); }
 .br-n[role="button"] { cursor: pointer; }
 .br-n[role="button"]:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
@@ -109,7 +112,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .br-mini { min-width: 0; flex-direction: row; align-items: center; gap: 7px; padding: 3px 9px 3px 5px; font-weight: 700; font-size: 12px; }
 .br-proj { border-color: var(--c, var(--line2)); }
 .br-proj b { white-space: nowrap; }
-.br-h { font-weight: 400; cursor: pointer; }
 .br-l1 { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: 12px; white-space: nowrap; min-width: 0; }
 .br-l2 { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink2); white-space: nowrap; }
 .br-g { font-weight: 800; color: var(--c, var(--mute)); font-family: var(--mono), "Segoe UI Symbol"; }
@@ -117,7 +119,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .br-hl { font-size: 9.5px; font-weight: 700; color: var(--ink2); border: 1px solid var(--line2); padding: 0 4px; line-height: 1.3; flex: none; }
 .br-st { margin-left: auto; padding-left: 10px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; color: var(--c); white-space: nowrap; flex: none; }
 .br-eff { color: var(--mute); font-weight: 400; }
-.br-plus { border: 1px solid var(--run); color: var(--run); font-size: 10.5px; font-weight: 700; padding: 0 4px; line-height: 1.2; }
+.br-lead { color: var(--ink2); font-size: 11px; }
+.br-btn.br-lead { justify-self: start; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* a job card: one branch under its lead; its helpers are small rows inside it */
+.br-job { width: 236px; min-width: 0; max-width: none; }
+.br-out { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* needs you: the lead's reason, red, on the card itself; outputs: one button each, green once the job is done */
+.br-need { font-size: 11.5px; font-weight: 700; color: var(--await); overflow-wrap: anywhere; }
+.br-btn.br-need-ok { border-color: var(--await); color: var(--await); }
+.br-outs { display: flex; flex-direction: column; gap: 4px; padding-top: 2px; min-width: 0; }
+.br-outs.in { flex-direction: row; flex-wrap: wrap; padding-top: 0; }
+.br-btn.br-open { max-width: 100%; min-width: 0; justify-content: flex-start; color: var(--ink2); }
+.br-btn.br-open.go { border-color: var(--done); background: var(--done); color: var(--bg); }
+.br-ol { overflow: hidden; text-overflow: ellipsis; font-weight: 400; min-width: 0; }
+.br-ok { margin-left: auto; padding-left: 4px; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; opacity: .8; flex: none; }
+.br-look .br-l { font-weight: 700; color: var(--done); }
+.br-jh { display: grid; gap: 2px; border-top: 1px solid var(--line); padding-top: 4px; }
+.br-jr { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink2); white-space: nowrap; min-width: 0; }
+.br-jr .br-chip { transform: scale(.85); }
+.br-jr .br-eff { flex: none; padding-left: 6px; }
+.br-jh .br-more { padding-left: 16px; }
+.br-bgw { display: grid; gap: 2px; }
+.br-bgi { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink2); white-space: nowrap; min-width: 0; border-left: 2px solid var(--run); padding-left: 5px; }
+.br-pname { cursor: text; white-space: nowrap; }
+.br-pname:hover, .br-pname:focus-visible { text-decoration: underline dotted; outline: none; }
+.br-rename { width: 16ch; height: 20px; padding: 0 4px; font: inherit; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--ink); }
 .br .br-tok { font-weight: 700; color: var(--ink); }
 .br-min { min-width: 3ch; text-align: right; }
 .br-push { margin-left: auto; }
@@ -157,6 +183,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .br-dl { display: grid; gap: 6px; }
 .br-dm { font-size: 11.5px; color: var(--ink2); }
 .br-ago { color: var(--c); font-weight: 700; }
+.br-outcome { font-size: 13px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.br-outcome .br-eff { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; }
+.br-dh3 { margin: 8px 0 0; font-size: 10.5px; font-weight: 400; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.br-did { display: grid; gap: 6px; }
+.br-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12px; color: var(--ink2); }
+.br-fact b { color: var(--ink); font-size: 14px; }
+.br-fact.bad, .br-fact.bad b { color: var(--await); }
+.br-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.br-call { border: 1px solid var(--line2); padding: 1px 6px; font-size: 11px; color: var(--ink2); white-space: nowrap; }
+.br-call i { font-style: normal; color: var(--mute); }
+.br-call b { color: var(--ink); }
+.br-scripts { overflow-wrap: anywhere; }
+.br-step { color: var(--ink); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .br-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .br-park { display: inline-flex; align-items: center; gap: 6px; }
 .br-date { height: 24px; background: none; border: 1px solid var(--line2); color: var(--ink2); font: inherit; font-size: 11px; padding: 0 4px; color-scheme: dark; }
@@ -261,6 +300,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tl-sess.sel { border-left-color: var(--ink); background: #161616; }
 .tl-sess.sel > .tl-lane:first-child .tl-name .br-nm { background: var(--ink); color: var(--bg); padding: 0 4px; }
 .tl-more { padding: 0 6px 2px 32px; }
+.tl-help.sel { background: #161616; }
+.tl-help.sel .tl-name .br-nm { background: var(--ink); color: var(--bg); padding: 0 4px; }
 .tl-axis { position: sticky; top: 0; z-index: 3; background: var(--bg); color: var(--mute); font-size: 10.5px; min-height: 40px; align-items: end; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .tl-axis .tl-name { font-weight: 400; }
 .tl-axis .tl-track { height: 30px; background: none; }
@@ -300,12 +341,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .br-row1 { flex-direction: column; gap: 22px; margin: 28px 0 0 24px; }
   .br-pcol { min-width: 0; }
   .br-n { max-width: 300px; }
+  /* jobs: two to a row, the state word under the name */
+  .br-jobs { gap: 22px 8px; margin-left: 12px; max-width: calc(2 * 160px + 8px); }
+  .br-job { width: 160px; }
+  .br-job .br-open { padding: 0 6px; font-size: 10.5px; overflow: hidden; }
+  .br-job .br-open .br-ol { display: none; }
+  .br-job .br-l1 { flex-wrap: wrap; row-gap: 2px; }
+  .br-job .br-l1 .br-nm { flex: 1 1 100px; }
+  .br-job .br-l1 .br-st { margin-left: 18px; padding-left: 0; }
+  .br-job .br-l2 .br-eff, .br-jr .br-eff { display: none; }
+  .br-job .br-l2 { gap: 5px; }
   .br-tl { max-width: 280px; }
   /* the drawer's table: no bar column, narrower number columns */
   .br-drow2 { grid-template-columns: 14px minmax(0, 1fr) 7ch 7ch 5ch; gap: 8px; }
   .br-drow2.hd { letter-spacing: 0; }
   .br-drow2 > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .br-drow2 > :nth-child(5) { display: none; }
+  .br-bgi .br-eff { display: none; } /* the sign and the colour already say it runs */
 }
 @media (max-width: 600px) {
   .tl-box { padding: 0 6px; }
@@ -314,6 +366,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .tl-lane > .tl-name { grid-area: name; } .tl-lane > .tl-track { grid-area: track; } .tl-lane > :last-child { grid-area: st; }
   .tl-axis { grid-template-areas: "name name" "track track"; } .tl-axis > :last-child { display: none; }
   .tl-tick.odd { display: none; }
+  .tl-help .tl-name .br-eff { display: none; }
+  .tl-lane > .br-st { max-width: 52vw; }
   .tl-lane > .br-st { margin-right: 8px; } /* clear of the now line, which sits at the right end */
   .tl-over { grid-template-columns: minmax(0, 1fr); padding: 0 4px; }
   .tl-over > span { display: none; }

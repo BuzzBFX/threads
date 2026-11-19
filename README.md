@@ -38,6 +38,7 @@ Using a coding assistant (Claude Code, Codex, Cursor...)? Open the folder and as
 | `--claude <dir>` | Claude Code's folder (default: `CLAUDE_CONFIG_DIR`, else `~/.claude`) |
 | `--data <dir>` | Where Got it, Park and the status files are kept (default: `./data`) |
 | `--catalog <file>` | Your own tools list (default: `./tools-catalog.json`) |
+| `--config <file>` | Local settings (default: `./config.json`): `projectNames`, `claudeDirs` |
 | `--read-only` | Write nothing |
 | `--help`, `--version` | |
 
@@ -48,17 +49,23 @@ Using a coding assistant (Claude Code, Codex, Cursor...)? Open the folder and as
 | `●` | running | cyan | it wrote in the last 10 minutes, a background job it started is still out, or its hook says so |
 | `!` | awaiting you | red | its hook saw a permission prompt or a question for you |
 | `⧗` | waiting | grey-blue | the session said so itself (`hooks/status.mjs --state waiting`) |
-| `…` | idle | yellow | it stopped and you have not looked yet |
-| `✓` | done | green | you pressed Got it; it leaves the tree and counts in "done this week" (from Monday 00:00) |
+| `…` | idle | yellow | it stopped and you have not looked yet (a job: it stopped before every helper finished) |
+| `✓` | done | green | a job whose helpers have all finished: press it to check what it did, then Got it |
 
-Without hooks a session is running while it writes (or waits on a background job), idle after that, and done after
-Got it. With hooks its own state wins.
+Got it takes a card off the tree and counts it in "done this week" (from Monday 00:00). A session has no finished
+mark, so it is idle when it stops; without hooks it is running while it writes (or waits on a background job). With
+hooks its own state wins.
 
 ## The tabs
 
-- **Brain**: you, your projects and their sessions, with helpers, tool tags, Got it and Park. A **Tree | Timeline** switch
-  shows them as a tree, or as today on one clock: a lane per session under its project, its helpers under it, a bar
-  for each busy stretch and a line at now. The picked session stays picked across the switch; the page remembers your choice.
+- **Brain**: you, your projects, the sessions that lead them, and each session's **jobs** side by side as its
+  branches. A job is the helpers whose description is `<Job>: <step>` (a helper with no colon is its own job); they
+  sit inside its card as rows. Its state is the worst of theirs, with its tool tag and background work still out
+  (`Blender · render_steps.py`, file names only). Press a job for **what it did**: its outcome line, calls by tool
+  name, files written, failed calls, the scripts it ran, its helpers, Got it and Park. A **Tree | Timeline** switch shows them as a tree,
+  or as today on one clock: a lane per session under its project, its jobs under it, a bar for each busy stretch and
+  a line at now. The picked card stays picked across the switch; the page remembers your choice. Click a project's
+  name to give it your own name.
 - **Details**: tokens (or list dollars) per day by model, per project, and per session with its largest context.
 - **Tools**: skills, helpers, MCP servers, hooks, plugins and commands, with how often each was used in 30 days.
 - **Team**: each helper file's model and effort, changed with one press.
@@ -67,6 +74,16 @@ Got it. With hooks its own state wins.
 
 - **Status hooks**: three hooks make "awaiting you" work and keep the state exact. See `hooks/README.md`.
   A session can also name itself: `node hooks/status.mjs --task "fix the login page"` (48 characters at most).
+- **Outcome lines**: the lead says what a job came to, in its own words (80 characters at most):
+  `node hooks/status.mjs --job "Gallery" --outcome "6 pages built, links checked"`.
+- **Needs you**: the lead turns a job's card red with its reason, until you press "Done, I've handled it":
+  `node hooks/status.mjs --job "Gallery" --needs "Pick one of 3 colourways"` (`--needs-clear` takes it away).
+- **Outputs**: the lead registers a file or local page for a job and its card gets an "Open output" button:
+  `node hooks/status.mjs --job "Gallery" --output "/abs/path/index.html" --output-label "6 pages"` (the path stays on the server).
+- **Project names, job groups and more folders**: `config.json` (git-ignored), e.g.
+  `{"projectNames": {"my-repo": "Website"}, "claudeDirs": ["/path/to/another/.claude"]}`. `"jobGroups":
+  {"<a helper's exact description>": "<Job>"}` puts a helper that was not named `<Job>: <step>` under a job. Without `--claude`, both
+  `~/.claude` and `CLAUDE_CONFIG_DIR` are read.
 - **Your own tools**: copy `tools-catalog.example.json` to `tools-catalog.json` and list your scripts; a `match`
   string counts the calls that name it.
 
@@ -74,6 +91,8 @@ Got it. With hooks its own state wins.
 
 - Reads Claude Code only; another agent can be added as a source module (`lib/sources/`).
 - Without hooks there is no "awaiting you".
+- "What it did" is names and counts, never text from a transcript; what a job came to is the lead's outcome line.
+- A helper belongs to a job by its description only; one with no description is a job named after its role.
 - "Waiting" shows only when a session sets it.
 - Dollars are a list-price estimate (`lib/prices.json`), not your bill.
 - A session leaves the tree after 2 hours of silence (12 hours with hooks).

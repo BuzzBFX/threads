@@ -1,4 +1,4 @@
-// Pictures of the four tabs (the Brain as Tree and Timeline, wide and phone) on the synthetic home, for a person to look at. Not part of npm test.
+// Pictures of the four tabs (the Brain as Tree and Timeline, wide and phone, with a finished job's "what it did" drawer open, a job that needs you and a done job with an output) on the synthetic home, for a person to look at. Not part of npm test.
 //   node test/shot.mjs   -> test/out/<name>.png
 import fs from 'node:fs';
 import os from 'node:os';
@@ -35,14 +35,17 @@ if (!browser) { console.log('no browser found; skipped'); process.exit(0); }
 const out = path.join(REPO, 'test', 'out');
 fs.mkdirSync(out, { recursive: true });
 const root = tmpDir();
-const h = makeHome(root, Date.now(), { twin: true });
+const h = makeHome(root, Date.now(), { twin: true, marks: true }); // marks: a job that needs you, and outputs to open
 // one done line, so the strip shows a count
 fs.writeFileSync(path.join(h.dataDir, 'seen.jsonl'), `${JSON.stringify({ at: new Date().toISOString(), id: nodeId('aaaaaaaa-0000-4000-8000-999999999999'), name: 'beta · earlier' })}\n`);
 const catalog = JSON.stringify({ items: [{ name: 'resize-images', line: 'Batch-resizes a folder of images', match: 'resize-images.mjs' }, { name: 'deploy', line: 'Builds and uploads the site' }] });
-const s = await startServer({ ...h, catalogText: catalog });
+const s = await startServer({ ...h, catalogText: catalog, configText: JSON.stringify({ projectNames: { beta: 'Bob' }, jobGroups: { 'Blender recreation, 6 variations': 'Mint video' } }) });
 // name, hash, width, height, and a click before the picture. Chrome's window has a minimum width, so the phone pictures need the DevTools protocol.
 const SHOTS = [['brain', 'brain/tree', 1440, 900], ['brain-timeline', 'brain/timeline', 1440, 900], ['details', 'details', 1440, 900], ['tools', 'tools', 1440, 900], ['team', 'team', 1440, 900],
-  ['brain-phone', 'brain/tree', 390, 844], ['brain-timeline-phone', 'brain/timeline', 390, 844], ['brain-drawer-phone', 'brain/tree', 390, 844, '.br-c[data-id]']];
+  ['brain-phone', 'brain/tree', 390, 844], ['brain-timeline-phone', 'brain/timeline', 390, 844], ['brain-drawer-phone', 'brain/tree', 390, 844, '.br-c[data-id]'],
+  ['brain-job', 'brain/tree', 1440, 900, '.br-job.s-done[data-id]'], ['brain-timeline-job', 'brain/timeline', 1440, 900, '.tl-help.s-done[data-id]'], ['brain-job-phone', 'brain/tree', 390, 844, '.br-job.s-done[data-id]'],
+  ['brain-needs', 'brain/tree', 1440, 900, '.br-job.s-await[data-id]'], ['brain-needs-phone', 'brain/tree', 390, 844, '.br-job.s-await[data-id]'],
+  ['brain-output', 'brain/tree', 1440, 900, '.br-job.s-done[data-id]', 'output'], ['brain-output-phone', 'brain/tree', 390, 844, '.br-job.s-done[data-id]', 'output']];
 const report = (name, file, extra = '') => console.log(`${name}: ${fs.existsSync(file) ? path.relative(REPO, file) : 'failed'}${extra}`);
 
 /** Screenshots through the DevTools protocol (Node 22+ has WebSocket): exact sizes, and the page width is measured. */

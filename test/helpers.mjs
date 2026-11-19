@@ -49,13 +49,15 @@ function request(port, method, p, { headers = {}, body = null } = {}) {
  * Starts node server.mjs on a free port with the given folders. The config and catalog paths always point inside a
  * temp folder, so a developer's own files never enter a test.
  */
-export async function startServer({ claudeDir, dataDir, args = [], catalogText = null }) {
+export async function startServer({ claudeDir, dataDir, args = [], catalogText = null, configText = null, env = {} }) {
   const port = await freePort();
   const own = tmpDir();
   const catalogFile = path.join(own, 'tools-catalog.json');
   if (catalogText != null) fs.writeFileSync(catalogFile, catalogText);
+  const configFile = path.join(own, 'config.json');
+  if (configText != null) fs.writeFileSync(configFile, configText);
   const child = spawn(process.execPath, [path.join(REPO, 'server.mjs'), '--port', String(port), '--claude', claudeDir, '--data', dataDir,
-    '--catalog', catalogFile, ...args], { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CLAUDE_CONFIG_DIR: '' } });
+    '--catalog', catalogFile, '--config', configFile, ...args], { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CLAUDE_CONFIG_DIR: '', THREADS_TEST_OPENER: '', ...env } });
   let out = '', err = '';
   child.stdout.on('data', (c) => { out += c; });
   child.stderr.on('data', (c) => { err += c; });
@@ -75,6 +77,7 @@ export async function startServer({ claudeDir, dataDir, args = [], catalogText =
     get: (p, headers = {}) => request(port, 'GET', p, { headers: { 'X-Threads-Token': token, ...headers } }),
     post: (p, body, headers = {}) => request(port, 'POST', p, { headers: { 'X-Threads-Token': token, Origin: origin, 'Content-Type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) }),
     raw: (method, p, opts) => request(port, method, p, opts),
+    configFile,
     output: () => out + err,
     stop: () => new Promise((resolve) => { if (child.exitCode != null) return resolve(); child.once('exit', resolve); child.kill(); }),
   };
